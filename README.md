@@ -69,6 +69,18 @@ Learn about how to install and use Continue in the docs [here](https://continue.
 Read the [contributing guide](https://github.com/continuedev/continue/blob/main/CONTRIBUTING.md), and
 join [#contribute on Discord](https://discord.gg/vapESyrFmJ).
 
+## Web-dev Usage
+
+1. If GUI is modified only, run this in GUI folder
+   ```
+   npm run build
+   ```
+2. Then, in extensions/vscode foler
+   ```
+   npm run prepackage
+   npm run package
+   ```
+
 ## License
 
 [Apache 2.0 © 2023-2024 Continue Dev, Inc.](./LICENSE)
