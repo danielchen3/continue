@@ -52,7 +52,7 @@ export function TaskPanelHeader({
         )}
       </div>
 
-      {/* 进度条 */}
+      {/* progress */}
       <div className="mb-2">
         <div className="mb-1 flex justify-between text-xs">
           <span className="font-medium">Overall Progress</span>

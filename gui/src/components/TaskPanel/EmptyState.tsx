@@ -26,7 +26,7 @@ export function EmptyState({
           Ask AI to generate a development plan
         </p>
 
-        {/* 简化的调试信息 */}
+        {/* Debugging */}
         <div className="mt-4 rounded bg-gray-50 p-3 text-left text-xs">
           <div className="mb-2 flex items-center justify-between">
             <span className="font-medium text-gray-700">Status</span>

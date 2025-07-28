@@ -81,7 +81,7 @@ export function TaskPanel({ isCollapsed, onToggleCollapse }: TaskPanelProps) {
         onToggleCollapse={onToggleCollapse}
       />
 
-      {/* 折叠状态下的最小化显示 */}
+      {/* Fold */}
       {isCollapsed && (
         <CollapsedView
           completedCount={completedCount}
@@ -89,10 +89,10 @@ export function TaskPanel({ isCollapsed, onToggleCollapse }: TaskPanelProps) {
         />
       )}
 
-      {/* 展开状态下的完整内容 */}
+      {/* Unfold */}
       {!isCollapsed && (
         <>
-          {/* 固定的头部 */}
+          {/* Header */}
           <div className="flex-shrink-0">
             <TaskPanelHeader
               projectInfo={projectInfo}
@@ -104,9 +104,8 @@ export function TaskPanel({ isCollapsed, onToggleCollapse }: TaskPanelProps) {
             />
           </div>
 
-          {/* 可滚动的内容区域 */}
           <div className="flex-1 overflow-y-auto">
-            {/* 任务列表 */}
+            {/* Task List */}
             <div className="space-y-2 p-4">
               {tasks.map((task, index) => (
                 <TaskCard

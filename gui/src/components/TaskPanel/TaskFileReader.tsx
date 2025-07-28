@@ -89,7 +89,7 @@ export function useTaskFile() {
         } as ProjectInfo;
       }
 
-      // Parse task title line - more flexible regex
+      // Parse task title line
       if (line.match(/^### [✅🔄📝❌]/)) {
         addLog(`🎯 Found potential task line: "${line}"`);
 
@@ -281,6 +281,6 @@ export function useTaskFile() {
     lastUpdated,
     refreshTasks: loadTaskFile,
     debugInfo,
-    parseDebugInfo, // 新增返回解析调试信息
+    parseDebugInfo,
   };
 }

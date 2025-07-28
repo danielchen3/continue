@@ -47,14 +47,14 @@ export function TaskCard({ task, index, getStatusIcon }: TaskCardProps) {
         className="flex items-start p-2"
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        {/* 任务编号 */}
+        {/* Task number */}
         <div
           className={`mr-3 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-xs font-semibold shadow-sm ${getTaskNumberStyle(task.status)}`}
         >
           {index + 1}
         </div>
 
-        {/* 任务内容 */}
+        {/* Task Content */}
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between">
             <div className="flex-1">
@@ -78,7 +78,7 @@ export function TaskCard({ task, index, getStatusIcon }: TaskCardProps) {
             </div>
           </div>
 
-          {/* 进度条 (仅在有进度时显示) */}
+          {/* Progress Line */}
           {task.progress && task.progress > 0 && (
             <div className="mt-3">
               <div className="text-vsc-foreground/80 mb-1 flex items-center justify-between text-xs">
@@ -94,7 +94,7 @@ export function TaskCard({ task, index, getStatusIcon }: TaskCardProps) {
             </div>
           )}
 
-          {/* 快速检查点预览 */}
+          {/* Checkpoint Preview */}
           {task.checkpoints && task.checkpoints.length > 0 && !isExpanded && (
             <div className="text-vsc-foreground/70 mt-3 flex items-center text-xs">
               <span className="mr-1 text-green-400">✓</span>
@@ -107,7 +107,7 @@ export function TaskCard({ task, index, getStatusIcon }: TaskCardProps) {
         </div>
       </div>
 
-      {/* 展开的详细信息 */}
+      {/* Unfolded Details */}
       {isExpanded && (
         <div className="border-t border-gray-100 px-3 pb-3">
           {task.description && (
