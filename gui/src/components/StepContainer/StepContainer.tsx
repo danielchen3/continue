@@ -42,6 +42,13 @@ export default function StepContainer(props: StepContainerProps) {
     return true;
   };
 
+  // 检查消息内容是否可能包含流程图数据
+  // const messageContent = renderChatMessage(props.item.message);
+  // const hasFlowChartContent =
+  //   typeof messageContent === "string" &&
+  //   props.item.message.role === "assistant" &&
+  //   detectFlowChartContent(messageContent);
+
   useEffect(() => {
     if (!isStreaming) {
       const content = renderChatMessage(props.item.message).trim();
@@ -94,6 +101,15 @@ export default function StepContainer(props: StepContainerProps) {
               source={stripImages(props.item.message.content)}
               itemIndex={props.index}
             />
+
+            {/**
+             * 在这里添加流程图渲染，只有当检测到流程图内容且不在流式传输中时显示
+             * {hasFlowChartContent && !isStreaming && (
+             *   <div className="mt-4">
+             *     <FlowChartRenderer {...parseFlowChartContent(messageContent)} />
+             *   </div>
+             * )}
+             */}
           </>
         )}
         {props.isLast && <ThinkingIndicator historyItem={props.item} />}

@@ -209,6 +209,7 @@ export function Chat() {
           }),
         );
       } else {
+        // 实际上是send input -> redux/thunk/streamResponse.ts
         void dispatch(streamResponseThunk({ editorState, modifiers, index }));
 
         if (editorToClearOnSend) {
