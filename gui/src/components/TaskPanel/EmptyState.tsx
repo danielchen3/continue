@@ -1,4 +1,5 @@
 // gui/src/components/TaskPanel/EmptyState.tsx
+// This module defines the EmptyState component for the TaskPanel, which is only for debugging purposes.
 import { FolderOpenIcon } from "@heroicons/react/24/outline";
 import { useState } from "react";
 

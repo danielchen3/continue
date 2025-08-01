@@ -453,6 +453,7 @@ export class Core {
       }
     });
 
+    // llm请求入口，返回response的流
     on("llm/streamChat", (msg) => {
       const abortController = this.addMessageAbortController(msg.messageId);
       return llmStreamChat(

@@ -55,6 +55,16 @@ export type ToWebviewFromIdeProtocol = ToWebviewFromIdeOrCoreProtocol & {
   submitMessage: [{ message: any }, void]; // any -> JSONContent from TipTap
   newSessionWithPrompt: [{ prompt: string }, void];
   userInput: [{ input: string }, void];
+  askAboutSelection: [
+    {
+      selectedText: string;
+      originalContext: string;
+      question: string;
+      itemIndex: number;
+      isQuickResponse?: boolean;
+    },
+    void,
+  ];
   focusContinueInput: [undefined, void];
   focusContinueInputWithoutClear: [undefined, void];
   focusContinueInputWithNewSession: [undefined, void];

@@ -252,6 +252,48 @@ export function Chat() {
     [dispatch],
   );
 
+  // Handle ask about selection requests
+  useWebviewListener(
+    "askAboutSelection",
+    async (data: {
+      selectedText: string;
+      originalContext: string;
+      question: string;
+      itemIndex: number;
+    }) => {
+      // Create a context-aware question
+      const contextAwareQuestion = `Based on the following context, please answer the question:
+
+Original context:
+${data.originalContext}
+
+User selected text:
+"${data.selectedText}"
+
+User question:
+${data.question}`;
+
+      // Send as a new user input
+      const editorState = {
+        type: "doc",
+        content: [
+          {
+            type: "paragraph",
+            content: [{ type: "text", text: contextAwareQuestion }],
+          },
+        ],
+      };
+
+      void dispatch(
+        streamResponseThunk({
+          editorState,
+          modifiers: { useCodebase: false, noContext: false },
+        }),
+      );
+    },
+    [dispatch],
+  );
+
   const isLastUserInput = useCallback(
     (index: number): boolean => {
       return !history

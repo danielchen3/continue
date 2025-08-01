@@ -1,10 +1,11 @@
 import { ChatHistoryItem } from "core";
 import { renderChatMessage, stripImages } from "core/util/messageContent";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import { useAppSelector } from "../../redux/hooks";
 import { selectUIConfig } from "../../redux/slices/configSlice";
 import { deleteMessage } from "../../redux/slices/sessionSlice";
+import SelectionContextMenu from "../SelectionContextMenu";
 import StyledMarkdownPreview from "../StyledMarkdownPreview";
 import Reasoning from "./Reasoning";
 import ResponseActions from "./ResponseActions";
@@ -19,6 +20,13 @@ interface StepContainerProps {
 export default function StepContainer(props: StepContainerProps) {
   const dispatch = useDispatch();
   const [isTruncated, setIsTruncated] = useState(false);
+  const [selectedText, setSelectedText] = useState("");
+  const [contextMenuPosition, setContextMenuPosition] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const [showContextMenu, setShowContextMenu] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
   const isStreaming = useAppSelector((state) => state.session.isStreaming);
   const historyItemAfterThis = useAppSelector(
     (state) => state.session.history[props.index + 1],
@@ -85,8 +93,69 @@ export default function StepContainer(props: StepContainerProps) {
     );
   }
 
+  function handleTextSelection(event: MouseEvent) {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) {
+      setShowContextMenu(false);
+      return;
+    }
+
+    const selectedText = selection.toString().trim();
+    if (selectedText.length === 0) {
+      setShowContextMenu(false);
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+    if (
+      containerRef.current &&
+      containerRef.current.contains(range.commonAncestorContainer)
+    ) {
+      setSelectedText(selectedText);
+      setContextMenuPosition({ x: event.clientX, y: event.clientY });
+      setShowContextMenu(true);
+    }
+  }
+
+  // handle document click to close context menu
+  function handleDocumentClick(event: MouseEvent) {
+    if (
+      containerRef.current &&
+      !containerRef.current.contains(event.target as Node)
+    ) {
+      setShowContextMenu(false);
+    }
+  }
+
+  useEffect(() => {
+    document.addEventListener("mouseup", handleTextSelection);
+    document.addEventListener("click", handleDocumentClick);
+
+    return () => {
+      document.removeEventListener("mouseup", handleTextSelection);
+      document.removeEventListener("click", handleDocumentClick);
+    };
+  }, []);
+
+  // handle context-aware question
+  function handleAskAboutSelection(question: string) {
+    window.postMessage(
+      {
+        messageType: "askAboutSelection",
+        data: {
+          selectedText,
+          originalContext: renderChatMessage(props.item.message),
+          question,
+          itemIndex: props.index,
+        },
+      },
+      "*",
+    );
+    setShowContextMenu(false);
+  }
+
   return (
-    <div>
+    <div ref={containerRef} style={{ position: "relative" }}>
       <div className="bg-background overflow-hidden p-1 px-1.5">
         {uiConfig?.displayRawMarkdown ? (
           <pre className="text-2xs max-w-full overflow-x-auto whitespace-pre-wrap break-words p-4">
@@ -128,6 +197,16 @@ export default function StepContainer(props: StepContainerProps) {
             />
           )}
         </div>
+      )}
+
+      {/* 选择文本的上下文菜单 */}
+      {showContextMenu && contextMenuPosition && (
+        <SelectionContextMenu
+          position={contextMenuPosition}
+          selectedText={selectedText}
+          onAskAboutSelection={handleAskAboutSelection}
+          onClose={() => setShowContextMenu(false)}
+        />
       )}
     </div>
   );
