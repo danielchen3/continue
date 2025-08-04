@@ -5,9 +5,10 @@ import { Chat } from "./Chat";
 
 export default function GUI() {
   const [isTaskPanelCollapsed, setIsTaskPanelCollapsed] = useState(false);
+  const [taskPanelWidth, setTaskPanelWidth] = useState(320);
 
   return (
-    <div className="flex w-screen flex-row overflow-hidden">
+    <div className="flex h-screen w-screen flex-row overflow-hidden">
       <aside className="4xl:flex border-vsc-input-border no-scrollbar hidden w-96 overflow-y-auto border-0 border-r border-solid">
         <History />
       </aside>
@@ -17,6 +18,8 @@ export default function GUI() {
       <TaskPanel
         isCollapsed={isTaskPanelCollapsed}
         onToggleCollapse={() => setIsTaskPanelCollapsed(!isTaskPanelCollapsed)}
+        width={taskPanelWidth}
+        onWidthChange={setTaskPanelWidth}
       />
     </div>
   );
