@@ -158,6 +158,20 @@ export const generateStaticDescription = (filename: string): string => {
   }
 };
 
+// Get file description from cache or generate static description
+export const getFileDescription = (
+  filePath: string,
+  filename: string,
+  content?: string,
+): string => {
+  // Check AI description cache first
+  if (descriptionCache.has(filePath)) {
+    return descriptionCache.get(filePath)!;
+  }
+  // Otherwise return static description
+  return generateStaticDescription(filename);
+};
+
 export const getAllFiles = (nodes: FileNode[]): FileNode[] => {
   const files: FileNode[] = [];
 
