@@ -2,6 +2,11 @@ import { ChatHistoryItem } from "core";
 import { renderChatMessage, stripImages } from "core/util/messageContent";
 import { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
+import {
+  ExtendedMarkdownRenderer,
+  hasExtensions,
+  parseExtendedContent,
+} from "../../features/inline-extensions";
 import { useAppSelector } from "../../redux/hooks";
 import { selectUIConfig } from "../../redux/slices/configSlice";
 import { deleteMessage } from "../../redux/slices/sessionSlice";
@@ -154,6 +159,24 @@ export default function StepContainer(props: StepContainerProps) {
     setShowContextMenu(false);
   }
 
+  const messageContent = stripImages(props.item.message.content);
+  const parsedContent = hasExtensions(messageContent)
+    ? parseExtendedContent(messageContent)
+    : null;
+
+  // 调试输出
+  // if (parsedContent) {
+  //   console.log("🔍 StepContainer: 检测到扩展内容");
+  //   console.log("📝 原始内容长度:", messageContent.length);
+  //   console.log("📝 主内容长度:", parsedContent.mainContent.length);
+  //   console.log("🔗 扩展数量:", parsedContent.extensions.length);
+  //   parsedContent.extensions.forEach((ext, i) => {
+  //     console.log(
+  //       `📖 扩展 ${i + 1}: "${ext.targetWord}" -> "${ext.content.substring(0, 50)}..."`,
+  //     );
+  //   });
+  // }
+
   return (
     <div ref={containerRef} style={{ position: "relative" }}>
       <div className="bg-background overflow-hidden p-1 px-1.5">
@@ -165,11 +188,21 @@ export default function StepContainer(props: StepContainerProps) {
           <>
             <Reasoning {...props} />
 
-            <StyledMarkdownPreview
-              isRenderingInStepContainer
-              source={stripImages(props.item.message.content)}
-              itemIndex={props.index}
-            />
+            {/* 检查是否有扩展内容 */}
+            {parsedContent ? (
+              <ExtendedMarkdownRenderer
+                content={parsedContent.mainContent}
+                extensions={parsedContent.extensions}
+                isRenderingInStepContainer
+                itemIndex={props.index}
+              />
+            ) : (
+              <StyledMarkdownPreview
+                isRenderingInStepContainer
+                source={messageContent}
+                itemIndex={props.index}
+              />
+            )}
 
             {/**
              * 在这里添加流程图渲染，只有当检测到流程图内容且不在流式传输中时显示
