@@ -300,6 +300,18 @@
         "group": "Continue"
       },
       {
+        "command": "continue.explainDocument",
+        "category": "Continue",
+        "title": "Explain Selected Content",
+        "group": "Continue"
+      },
+      {
+        "command": "continue.quickChatWithSelection",
+        "category": "Continue",
+        "title": "Quick Chat with Selection",
+        "group": "Continue"
+      },
+      {
         "command": "continue.codebaseForceReIndex",
         "category": "Continue",
         "title": "Codebase Force Re-Index",
@@ -413,6 +425,18 @@
         "title": "Edit code with natural language",
         "mac": "cmd+i",
         "key": "ctrl+i"
+      },
+      {
+        "command": "continue.explainDocument",
+        "title": "Explain selected content",
+        "mac": "cmd+e",
+        "key": "ctrl+e"
+      },
+      {
+        "command": "continue.quickChatWithSelection",
+        "title": "Quick chat with selection",
+        "mac": "cmd+shift+q",
+        "key": "ctrl+shift+q"
       },
       {
         "command": "continue.exitEditMode",
@@ -537,6 +561,16 @@
           "command": "continue.fixGrammar",
           "group": "Continue",
           "when": "editorHasSelection && editorLangId == 'markdown' && !editorReadonly"
+        },
+        {
+          "command": "continue.explainDocument",
+          "group": "Continue",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "continue.quickChatWithSelection",
+          "group": "Continue",
+          "when": "editorHasSelection"
         }
       ],
       "explorer/context": [

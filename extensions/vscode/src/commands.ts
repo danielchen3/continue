@@ -31,12 +31,14 @@ import { ContinueConsoleWebviewViewProvider } from "./ContinueConsoleWebviewView
 import { ContinueGUIWebviewViewProvider } from "./ContinueGUIWebviewViewProvider";
 import { processDiff } from "./diff/processDiff";
 import { VerticalDiffManager } from "./diff/vertical/manager";
+import { QuickChatDialog } from "./quickChat/QuickChatDialog";
 import EditDecorationManager from "./quickEdit/EditDecorationManager";
 import { QuickEdit, QuickEditShowParams } from "./quickEdit/QuickEditQuickPick";
 import {
   addCodeToContextFromRange,
   addEntireFileToContext,
   addHighlightedCodeToContext,
+  getRangeInFileWithContents,
 } from "./util/addCode";
 import { Battery } from "./util/battery";
 import { getMetaKeyLabel } from "./util/util";
@@ -173,6 +175,14 @@ const getCommandsMap: (
       rulesToInclude: config.rules,
     });
   }
+
+  // 创建快速对话窗口实例
+  const quickChatDialog = new QuickChatDialog(
+    extensionContext,
+    configHandler,
+    core,
+    sidebar.webviewProtocol,
+  );
 
   return {
     "continue.acceptDiff": async (newFileUri?: string, streamId?: string) => {
@@ -381,6 +391,35 @@ const getCommandsMap: (
         "fixGrammar",
         "If there are any grammar or spelling mistakes in this writing, fix them. Do not make other large changes to the writing.",
       );
+    },
+    "continue.explainDocument": async () => {
+      captureCommandTelemetry("explainDocument");
+
+      const rangeInFileWithContents = getRangeInFileWithContents();
+      if (rangeInFileWithContents) {
+        const prompt = `Please explain the following content briefly, making it easy for beginners to understand. Break down complex concepts and provide context where needed:\n\n${rangeInFileWithContents.contents}. Please write down your explanation directly in markdown format, where I can easily apply to my document`;
+
+        addCodeToContextFromRange(
+          new vscode.Range(
+            rangeInFileWithContents.range.start.line,
+            rangeInFileWithContents.range.start.character,
+            rangeInFileWithContents.range.end.line,
+            rangeInFileWithContents.range.end.character,
+          ),
+          sidebar.webviewProtocol,
+          prompt,
+        );
+
+        vscode.commands.executeCommand("continue.continueGUIView.focus");
+      } else {
+        vscode.window.showInformationMessage(
+          "Please select some text to explain.",
+        );
+      }
+    },
+    "continue.quickChatWithSelection": async () => {
+      captureCommandTelemetry("quickChatWithSelection");
+      await quickChatDialog.show();
     },
     "continue.clearConsole": async () => {
       consoleView.clearLog();

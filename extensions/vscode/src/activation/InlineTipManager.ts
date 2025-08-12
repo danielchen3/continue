@@ -19,6 +19,8 @@ const SVG_CONFIG = {
   chatShortcut: `${getMetaKeyLabel()}+L`,
   editLabel: "Edit",
   editShortcut: `${getMetaKeyLabel()}+I`,
+  explainLabel: "Explain",
+  explainShortcut: `${getMetaKeyLabel()}+E`,
 
   get fontSize() {
     return Math.ceil(
@@ -40,8 +42,8 @@ const SVG_CONFIG = {
   },
   get tipWidth() {
     return (
-      this.editShortcutX +
-      this.getEstimatedTextWidth(this.editShortcut) +
+      this.explainShortcutX +
+      this.getEstimatedTextWidth(this.explainShortcut) +
       this.paddingX
     );
   },
@@ -66,6 +68,18 @@ const SVG_CONFIG = {
   },
   get editShortcutX() {
     return this.editLabelX + this.getEstimatedTextWidth(this.editLabel + " ");
+  },
+  get explainLabelX() {
+    return (
+      this.editShortcutX +
+      this.getEstimatedTextWidth(this.editShortcut) +
+      this.gap
+    );
+  },
+  get explainShortcutX() {
+    return (
+      this.explainLabelX + this.getEstimatedTextWidth(this.explainLabel + " ")
+    );
   },
   getEstimatedTextWidth(text: string): number {
     return text.length * this.fontSize * 0.6;
@@ -299,6 +313,23 @@ export class InlineTipManager {
             fill: SVG_CONFIG.shortcutColor,
           },
           SVG_CONFIG.editShortcut,
+        )
+        // Explain
+        .text(
+          {
+            ...baseTextConfig,
+            x: SVG_CONFIG.explainLabelX,
+            fill: this.theme.colors["editor.foreground"],
+          },
+          SVG_CONFIG.explainLabel,
+        )
+        .text(
+          {
+            ...baseTextConfig,
+            x: SVG_CONFIG.explainShortcutX,
+            fill: SVG_CONFIG.shortcutColor,
+          },
+          SVG_CONFIG.explainShortcut,
         )
         .render();
 
