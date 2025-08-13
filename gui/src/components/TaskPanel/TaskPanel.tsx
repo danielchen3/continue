@@ -9,7 +9,7 @@ import {
   Squares2X2Icon,
   ViewColumnsIcon,
 } from "@heroicons/react/24/outline";
-import { useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import {
   ProjectStructureFlow,
   ProjectStructureGrid,
@@ -21,6 +21,28 @@ import { EmptyState } from "./EmptyState";
 import { TaskCard } from "./TaskCard";
 import { useTaskFile } from "./TaskFileReader";
 import { TaskPanelHeader } from "./TaskPanelHeader";
+
+// explanation storage
+export interface ExplanationItem {
+  id: string;
+  selectedText: string;
+  explanation: string;
+  timestamp: Date;
+  isLoading: boolean;
+  taskIndex: number;
+}
+
+interface ExplanationsContextType {
+  explanations: ExplanationItem[];
+  setExplanations: React.Dispatch<React.SetStateAction<ExplanationItem[]>>;
+}
+
+const ExplanationsContext = createContext<ExplanationsContextType>({
+  explanations: [],
+  setExplanations: () => {},
+});
+
+export const useExplanationsContext = () => useContext(ExplanationsContext);
 
 interface TaskPanelProps {
   isCollapsed: boolean;
@@ -41,6 +63,43 @@ export function TaskPanel({
   const [activeTab, setActiveTab] = useState<TabType>("tasks");
   const [structureView, setStructureView] = useState<StructureView>("tree");
   const [isResizing, setIsResizing] = useState(false);
+
+  // 全局的explanations状态，带本地存储
+  const [explanations, setExplanations] = useState<ExplanationItem[]>(() => {
+    try {
+      const saved = localStorage.getItem("taskpanel-explanations");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // 恢复Date对象，并处理旧数据兼容性
+        return parsed.map((item: any, index: number) => ({
+          ...item,
+          timestamp: new Date(item.timestamp),
+          taskIndex: item.taskIndex !== undefined ? item.taskIndex : -1, // 旧数据默认为-1，表示未分配
+        }));
+      }
+    } catch (error) {
+      console.warn("Failed to load explanations from localStorage:", error);
+    }
+    return [];
+  });
+
+  // 保存explanations到localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        "taskpanel-explanations",
+        JSON.stringify(explanations),
+      );
+    } catch (error) {
+      console.warn("Failed to save explanations to localStorage:", error);
+    }
+  }, [explanations]);
+
+  // 清理旧的未分配任务索引的explanations
+  useEffect(() => {
+    setExplanations((prev) => prev.filter((item) => item.taskIndex !== -1));
+  }, []); // 只在组件挂载时执行一次
+
   const {
     projectInfo,
     tasks,
@@ -177,8 +236,54 @@ export function TaskPanel({
   // Task panel with no tasks
   if (!projectInfo || tasks.length === 0) {
     return (
+      <ExplanationsContext.Provider value={{ explanations, setExplanations }}>
+        <div
+          className={`border-vsc-input-border relative border-l transition-all duration-300 ${
+            isCollapsed ? "w-12" : ""
+          }`}
+          style={{ width: isCollapsed ? "48px" : `${width}px` }}
+        >
+          {/* 拖拽调整宽度的手柄 */}
+          {!isCollapsed && (
+            <div
+              className="hover:bg-vsc-focusBorder absolute left-0 top-0 z-10 h-full w-1 cursor-col-resize bg-transparent"
+              onMouseDown={handleMouseDown}
+              style={{ cursor: isResizing ? "col-resize" : "col-resize" }}
+            />
+          )}
+
+          <CollapseButton
+            isCollapsed={isCollapsed}
+            onToggleCollapse={onToggleCollapse}
+          />
+          {!isCollapsed && (
+            <div className="flex h-full flex-col">
+              {renderTabs()}
+              {activeTab === "structure" && renderStructureViewToggle()}
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                {activeTab === "tasks" ? (
+                  <EmptyState
+                    debugInfo={debugInfo}
+                    parseDebugInfo={parseDebugInfo}
+                    tasks={tasks}
+                    refreshTasks={refreshTasks}
+                  />
+                ) : (
+                  renderStructureContent()
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </ExplanationsContext.Provider>
+    );
+  }
+
+  // Task panel with tasks
+  return (
+    <ExplanationsContext.Provider value={{ explanations, setExplanations }}>
       <div
-        className={`border-vsc-input-border relative border-l transition-all duration-300 ${
+        className={`border-vsc-input-border relative flex h-full flex-col border-l transition-all duration-300 ${
           isCollapsed ? "w-12" : ""
         }`}
         style={{ width: isCollapsed ? "48px" : `${width}px` }}
@@ -196,18 +301,57 @@ export function TaskPanel({
           isCollapsed={isCollapsed}
           onToggleCollapse={onToggleCollapse}
         />
+
+        {/* Fold */}
+        {isCollapsed && (
+          <CollapsedView
+            completedCount={completedCount}
+            totalTasks={tasks.length}
+          />
+        )}
+
+        {/* Unfold */}
         {!isCollapsed && (
-          <div className="flex h-full flex-col">
+          <div className="flex flex-1 flex-col">
+            {/* 标签栏 */}
             {renderTabs()}
+
+            {/* 项目结构视图切换 */}
             {activeTab === "structure" && renderStructureViewToggle()}
+
+            {/* 内容区域 */}
             <div className="flex-1 overflow-hidden">
               {activeTab === "tasks" ? (
-                <EmptyState
-                  debugInfo={debugInfo}
-                  parseDebugInfo={parseDebugInfo}
-                  tasks={tasks}
-                  refreshTasks={refreshTasks}
-                />
+                <div className="flex h-full flex-col">
+                  {/* Header */}
+                  <div className="flex-shrink-0">
+                    <TaskPanelHeader
+                      projectInfo={projectInfo}
+                      completedCount={completedCount}
+                      totalTasks={tasks.length}
+                      progressPercentage={progressPercentage}
+                      lastUpdated={lastUpdated}
+                      refreshTasks={refreshTasks}
+                    />
+                  </div>
+
+                  {/* Scrollable Task List */}
+                  <div
+                    className="min-h-0 overflow-y-auto"
+                    style={{ height: "calc(100vh - 250px)" }}
+                  >
+                    <div className="space-y-2 p-4">
+                      {tasks.map((task, index) => (
+                        <TaskCard
+                          key={task.id}
+                          task={task}
+                          index={index}
+                          getStatusIcon={getStatusIcon}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
               ) : (
                 renderStructureContent()
               )}
@@ -215,84 +359,6 @@ export function TaskPanel({
           </div>
         )}
       </div>
-    );
-  }
-
-  // Task panel with tasks
-  return (
-    <div
-      className={`border-vsc-input-border relative flex h-full flex-col border-l transition-all duration-300 ${
-        isCollapsed ? "w-12" : ""
-      }`}
-      style={{ width: isCollapsed ? "48px" : `${width}px` }}
-    >
-      {/* 拖拽调整宽度的手柄 */}
-      {!isCollapsed && (
-        <div
-          className="hover:bg-vsc-focusBorder absolute left-0 top-0 z-10 h-full w-1 cursor-col-resize bg-transparent"
-          onMouseDown={handleMouseDown}
-          style={{ cursor: isResizing ? "col-resize" : "col-resize" }}
-        />
-      )}
-
-      <CollapseButton
-        isCollapsed={isCollapsed}
-        onToggleCollapse={onToggleCollapse}
-      />
-
-      {/* Fold */}
-      {isCollapsed && (
-        <CollapsedView
-          completedCount={completedCount}
-          totalTasks={tasks.length}
-        />
-      )}
-
-      {/* Unfold */}
-      {!isCollapsed && (
-        <div className="flex flex-1 flex-col">
-          {/* 标签栏 */}
-          {renderTabs()}
-
-          {/* 项目结构视图切换 */}
-          {activeTab === "structure" && renderStructureViewToggle()}
-
-          {/* 内容区域 */}
-          <div className="flex-1 overflow-hidden">
-            {activeTab === "tasks" ? (
-              <div className="flex h-full flex-col">
-                {/* Header */}
-                <div className="flex-shrink-0">
-                  <TaskPanelHeader
-                    projectInfo={projectInfo}
-                    completedCount={completedCount}
-                    totalTasks={tasks.length}
-                    progressPercentage={progressPercentage}
-                    lastUpdated={lastUpdated}
-                    refreshTasks={refreshTasks}
-                  />
-                </div>
-
-                <div className="flex-1 overflow-y-auto">
-                  {/* Task List */}
-                  <div className="space-y-2 p-4">
-                    {tasks.map((task, index) => (
-                      <TaskCard
-                        key={task.id}
-                        task={task}
-                        index={index}
-                        getStatusIcon={getStatusIcon}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              renderStructureContent()
-            )}
-          </div>
-        </div>
-      )}
-    </div>
+    </ExplanationsContext.Provider>
   );
 }
