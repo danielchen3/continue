@@ -17,30 +17,27 @@ const predefinedQuestions = [
   {
     icon: DocumentTextIcon,
     label: "Brief explanation",
-    question: "Please provide a brief explanation of the following content:",
+    question: "Please explain this briefly",
   },
   {
     icon: LightBulbIcon,
     label: "Give examples",
-    question:
-      "Please provide some specific examples for the following content:",
+    question: "Please provide examples for this",
   },
   {
     icon: DocumentTextIcon,
     label: "Detailed explanation",
-    question:
-      "Please provide a more detailed explanation of the following content:",
+    question: "Please explain this in detail",
   },
   {
     icon: SparklesIcon,
     label: "Simplify explanation",
-    question: "Please explain the following content in a simpler way:",
+    question: "Please explain this simply",
   },
   {
     icon: ChatBubbleLeftRightIcon,
     label: "Related questions",
-    question:
-      "Regarding the following content, what are some related questions or concepts:",
+    question: "What are related questions or concepts for this",
   },
 ];
 
@@ -134,7 +131,7 @@ export default function SelectionContextMenu({
           <button
             key={index}
             onClick={() => {
-              onAskAboutSelection(`${item.question}\n\n"${selectedText}"`);
+              onAskAboutSelection(`${item.question}: ${selectedText}`);
               onClose();
             }}
             className="mb-1.5 flex w-full items-center space-x-3 rounded-md bg-gray-700 px-3 py-2.5 text-sm text-white transition-colors duration-150 hover:bg-gray-600"

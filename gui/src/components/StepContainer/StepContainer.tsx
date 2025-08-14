@@ -149,7 +149,6 @@ export default function StepContainer(props: StepContainerProps) {
         messageType: "askAboutSelection",
         data: {
           selectedText,
-          originalContext: renderChatMessage(props.item.message),
           question,
           itemIndex: props.index,
         },

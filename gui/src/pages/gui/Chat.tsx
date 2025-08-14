@@ -257,21 +257,11 @@ export function Chat() {
     "askAboutSelection",
     async (data: {
       selectedText: string;
-      originalContext: string;
       question: string;
       itemIndex: number;
     }) => {
-      // Create a context-aware question
-      const contextAwareQuestion = `Based on the following context, please answer the question:
-
-Original context:
-${data.originalContext}
-
-User selected text:
-"${data.selectedText}"
-
-User question:
-${data.question}`;
+      // Create a simplified question
+      const simplifiedQuestion = `${data.question}`;
 
       // Send as a new user input
       const editorState = {
@@ -279,7 +269,7 @@ ${data.question}`;
         content: [
           {
             type: "paragraph",
-            content: [{ type: "text", text: contextAwareQuestion }],
+            content: [{ type: "text", text: simplifiedQuestion }],
           },
         ],
       };
