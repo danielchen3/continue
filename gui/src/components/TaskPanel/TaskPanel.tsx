@@ -18,6 +18,7 @@ import {
 import { CollapseButton } from "./CollapseButton";
 import { CollapsedView } from "./CollapsedView";
 import { EmptyState } from "./EmptyState";
+import { RequirementsTaskAlignment } from "./RequirementsTaskAlignment";
 import { TaskCard } from "./TaskCard";
 import { useTaskFile } from "./TaskFileReader";
 import { TaskPanelHeader } from "./TaskPanelHeader";
@@ -51,7 +52,7 @@ interface TaskPanelProps {
   onWidthChange?: (width: number) => void;
 }
 
-type TabType = "tasks" | "structure";
+type TabType = "requirements-alignment" | "tasks" | "structure";
 type StructureView = "tree" | "flow" | "grid";
 
 export function TaskPanel({
@@ -60,21 +61,21 @@ export function TaskPanel({
   width = 320,
   onWidthChange,
 }: TaskPanelProps) {
-  const [activeTab, setActiveTab] = useState<TabType>("tasks");
+  const [activeTab, setActiveTab] = useState<TabType>("requirements-alignment");
   const [structureView, setStructureView] = useState<StructureView>("tree");
   const [isResizing, setIsResizing] = useState(false);
 
-  // 全局的explanations状态，带本地存储
+  // Global explanations state with localStorage
   const [explanations, setExplanations] = useState<ExplanationItem[]>(() => {
     try {
       const saved = localStorage.getItem("taskpanel-explanations");
       if (saved) {
         const parsed = JSON.parse(saved);
-        // 恢复Date对象，并处理旧数据兼容性
+        // Restore Date objects and handle legacy data compatibility
         return parsed.map((item: any, index: number) => ({
           ...item,
           timestamp: new Date(item.timestamp),
-          taskIndex: item.taskIndex !== undefined ? item.taskIndex : -1, // 旧数据默认为-1，表示未分配
+          taskIndex: item.taskIndex !== undefined ? item.taskIndex : -1, // Legacy data default to -1
         }));
       }
     } catch (error) {
@@ -83,7 +84,7 @@ export function TaskPanel({
     return [];
   });
 
-  // 保存explanations到localStorage
+  // Save explanations to localStorage
   useEffect(() => {
     try {
       localStorage.setItem(
@@ -95,7 +96,7 @@ export function TaskPanel({
     }
   }, [explanations]);
 
-  // 清理旧的未分配任务索引的explanations
+  // Clean up old unassigned task index explanations
   useEffect(() => {
     setExplanations((prev) => prev.filter((item) => item.taskIndex !== -1));
   }, []); // 只在组件挂载时执行一次
@@ -157,6 +158,17 @@ export function TaskPanel({
   const renderTabs = () => (
     <div className="border-vsc-input-border flex border-b">
       <button
+        onClick={() => setActiveTab("requirements-alignment")}
+        className={`flex items-center px-3 py-2 text-sm font-medium transition-colors ${
+          activeTab === "requirements-alignment"
+            ? "border-vsc-focusBorder text-vsc-foreground bg-vsc-editor-background border-b-2"
+            : "text-vsc-descriptionForeground hover:text-vsc-foreground hover:bg-vsc-editor-hover"
+        }`}
+      >
+        <ChartBarIcon className="mr-2 h-4 w-4" />
+        Requirements
+      </button>
+      <button
         onClick={() => setActiveTab("tasks")}
         className={`flex items-center px-3 py-2 text-sm font-medium transition-colors ${
           activeTab === "tasks"
@@ -165,7 +177,7 @@ export function TaskPanel({
         }`}
       >
         <ListBulletIcon className="mr-2 h-4 w-4" />
-        Task List
+        Tasks
       </button>
       <button
         onClick={() => setActiveTab("structure")}
@@ -176,7 +188,7 @@ export function TaskPanel({
         }`}
       >
         <FolderIcon className="mr-2 h-4 w-4" />
-        Project Structure
+        Structure
       </button>
     </div>
   );
@@ -268,6 +280,8 @@ export function TaskPanel({
                     tasks={tasks}
                     refreshTasks={refreshTasks}
                   />
+                ) : activeTab === "requirements-alignment" ? (
+                  <RequirementsTaskAlignment isCollapsed={false} />
                 ) : (
                   renderStructureContent()
                 )}
@@ -352,6 +366,8 @@ export function TaskPanel({
                     </div>
                   </div>
                 </div>
+              ) : activeTab === "requirements-alignment" ? (
+                <RequirementsTaskAlignment isCollapsed={false} />
               ) : (
                 renderStructureContent()
               )}
