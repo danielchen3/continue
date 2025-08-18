@@ -166,7 +166,7 @@ export function TaskPanel({
         }`}
       >
         <ChartBarIcon className="mr-2 h-4 w-4" />
-        Requirements
+        Mind Map
       </button>
       <button
         onClick={() => setActiveTab("tasks")}
