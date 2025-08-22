@@ -1,7 +1,7 @@
 // AI Full-stack Project Analysis Prompt
 export const FULL_STACK_ANALYSIS_PROMPT = `You are a full-stack project analysis expert familiar with frontend/backend development architecture and visualization design.
 
-I will attach a complete project folder to you. Please analyze and return the following structured content in JSON format:
+I will attach a complete project folder to you. Please analyze and return the following structured content in JSON format, followed by a plain text project description for visualization:
 
 {
   "project_name": "",                     // Project name (from package.json or other config)
@@ -75,10 +75,33 @@ I will attach a complete project folder to you. Please analyze and return the fo
   ]
 }
 
+---
+
+PLAIN TEXT PROJECT DESCRIPTION (for visualization):
+
+项目: [Project Name]
+
+技术栈: [List main technologies separated by commas]
+
+前端:
+- [Component.tsx]: [Description]
+  - [method1()]: [Method description]
+  - [method2()]: [Method description]
+- [Another.tsx]: [Description]
+
+后端:
+- [api/routes.py]: [Description]
+  - GET /api/users: [Route description]
+  - POST /api/login: [Route description]
+- [models.py]: [Description]
+
+数据库:
+- User: [Model description]
+- Product: [Model description]
+
 Requirements:
-- Output only structured JSON, no explanations or extra language
-- If multiple frontend/backend sub-modules found (mono-repo), handle separately
-- Complete all information as much as possible, even from comments, README, or file name inference
+- Output both JSON and plain text sections
+- Plain text should follow the exact format shown above for proper parsing
 - Focus on providing clear architectural insights for full-stack development understanding
 - **IMPORTANT**: Analyze import statements, API calls, and data flow to populate "connects_to" and "connections" arrays
 - Try to identify line numbers for methods and routes by analyzing the code structure

@@ -2,6 +2,7 @@
 import {
   ArrowPathIcon,
   CogIcon,
+  DocumentTextIcon,
   FolderIcon,
   SparklesIcon,
 } from "@heroicons/react/24/outline";
@@ -10,6 +11,7 @@ import { AIAnalysisData } from "../types";
 
 interface FlowToolbarProps {
   analysisData: AIAnalysisData | null;
+  analysisResult?: string; // 添加 analysisResult 用于描述视图
   isAnalyzing: boolean;
   isLoading: boolean;
   isCacheValid?: boolean;
@@ -19,12 +21,14 @@ interface FlowToolbarProps {
   onRefreshAnalysis?: () => void;
   onSwitchToFileTree: () => void;
   onSwitchToAIView: () => void;
+  onSwitchToDescriptionView?: () => void; // 添加描述视图切换函数
   onDevServerUrlChange?: (url: string) => void;
 }
 
 // Toolbar with analysis and view switching controls
 export const FlowToolbar: React.FC<FlowToolbarProps> = ({
   analysisData,
+  analysisResult = "",
   isAnalyzing,
   isLoading,
   isCacheValid = true,
@@ -34,6 +38,7 @@ export const FlowToolbar: React.FC<FlowToolbarProps> = ({
   onRefreshAnalysis,
   onSwitchToFileTree,
   onSwitchToAIView,
+  onSwitchToDescriptionView,
   onDevServerUrlChange,
 }) => {
   const [showUrlInput, setShowUrlInput] = useState(false);
@@ -65,10 +70,13 @@ export const FlowToolbar: React.FC<FlowToolbarProps> = ({
         )}
 
         {/* View Mode Toggle */}
-        {analysisData && (
+        {(analysisData || analysisResult) && (
           <ViewModeToggle
             onSwitchToFileTree={onSwitchToFileTree}
             onSwitchToAIView={onSwitchToAIView}
+            onSwitchToDescriptionView={onSwitchToDescriptionView}
+            hasAnalysisData={!!analysisData}
+            hasAnalysisResult={!!analysisResult}
           />
         )}
 
@@ -151,7 +159,16 @@ export const FlowToolbar: React.FC<FlowToolbarProps> = ({
 const ViewModeToggle: React.FC<{
   onSwitchToFileTree: () => void;
   onSwitchToAIView: () => void;
-}> = ({ onSwitchToFileTree, onSwitchToAIView }) => (
+  onSwitchToDescriptionView?: () => void;
+  hasAnalysisData: boolean;
+  hasAnalysisResult: boolean;
+}> = ({
+  onSwitchToFileTree,
+  onSwitchToAIView,
+  onSwitchToDescriptionView,
+  hasAnalysisData,
+  hasAnalysisResult,
+}) => (
   <>
     <ActionButton
       onClick={onSwitchToFileTree}
@@ -159,13 +176,28 @@ const ViewModeToggle: React.FC<{
       label="File Tree"
       title="Switch to file tree view"
     />
-    <span className="text-vsc-descriptionForeground">|</span>
-    <ActionButton
-      onClick={onSwitchToAIView}
-      icon={<SparklesIcon className="h-3 w-3" />}
-      label="AI View"
-      title="Switch to AI analysis view"
-    />
+    {hasAnalysisData && (
+      <>
+        <span className="text-vsc-descriptionForeground">|</span>
+        <ActionButton
+          onClick={onSwitchToAIView}
+          icon={<SparklesIcon className="h-3 w-3" />}
+          label="AI View"
+          title="Switch to AI analysis view"
+        />
+      </>
+    )}
+    {hasAnalysisResult && onSwitchToDescriptionView && (
+      <>
+        <span className="text-vsc-descriptionForeground">|</span>
+        <ActionButton
+          onClick={onSwitchToDescriptionView}
+          icon={<DocumentTextIcon className="h-3 w-3" />}
+          label="Description"
+          title="Switch to description visualization view"
+        />
+      </>
+    )}
   </>
 );
 

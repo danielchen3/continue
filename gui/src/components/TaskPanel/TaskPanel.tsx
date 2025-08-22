@@ -6,13 +6,11 @@ import {
   FolderIcon,
   ListBulletIcon,
   PlayCircleIcon,
-  Squares2X2Icon,
   ViewColumnsIcon,
 } from "@heroicons/react/24/outline";
 import { createContext, useContext, useEffect, useState } from "react";
 import {
   ProjectStructureFlow,
-  ProjectStructureGrid,
   ProjectStructurePanel,
 } from "../ProjectStructure";
 import { CollapseButton } from "./CollapseButton";
@@ -53,7 +51,7 @@ interface TaskPanelProps {
 }
 
 type TabType = "requirements-alignment" | "tasks" | "structure";
-type StructureView = "tree" | "flow" | "grid";
+type StructureView = "tree" | "description";
 
 export function TaskPanel({
   isCollapsed,
@@ -209,38 +207,24 @@ export function TaskPanel({
         Tree
       </button>
       <button
-        onClick={() => setStructureView("flow")}
+        onClick={() => setStructureView("description")}
         className={`flex items-center px-2 py-1 text-xs transition-colors ${
-          structureView === "flow"
+          structureView === "description"
             ? "text-vsc-foreground bg-vsc-editor-background"
             : "text-vsc-descriptionForeground hover:text-vsc-foreground hover:bg-vsc-editor-hover"
         }`}
-        title="Flow Diagram"
+        title="AI Description Visualization"
       >
         <ChartBarIcon className="mr-1 h-3 w-3" />
-        Flow
-      </button>
-      <button
-        onClick={() => setStructureView("grid")}
-        className={`flex items-center px-2 py-1 text-xs transition-colors ${
-          structureView === "grid"
-            ? "text-vsc-foreground bg-vsc-editor-background"
-            : "text-vsc-descriptionForeground hover:text-vsc-foreground hover:bg-vsc-editor-hover"
-        }`}
-        title="Grid View"
-      >
-        <Squares2X2Icon className="mr-1 h-3 w-3" />
-        Grid
+        AI Description
       </button>
     </div>
   );
 
   // 渲染项目结构内容
   const renderStructureContent = () => {
-    if (structureView === "flow") {
+    if (structureView === "description") {
       return <ProjectStructureFlow isCollapsed={false} />;
-    } else if (structureView === "grid") {
-      return <ProjectStructureGrid isCollapsed={false} />;
     }
     return <ProjectStructurePanel isCollapsed={false} />;
   };
