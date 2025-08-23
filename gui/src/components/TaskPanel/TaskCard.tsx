@@ -2,6 +2,7 @@
 import React, { useContext, useState } from "react";
 import { IdeMessengerContext } from "../../context/IdeMessenger";
 import { KnowledgeArea } from "./ExplanationPanel";
+import { RelatedFilesPanel } from "./RelatedFilesPanel";
 import { SelectableText } from "./SelectableText";
 import { ExplanationItem, useExplanationsContext } from "./TaskPanel";
 
@@ -13,7 +14,10 @@ interface TaskCardProps {
     estimatedTime?: string;
     status: "completed" | "in-progress" | "pending";
     progress?: number;
-    // relatedFiles: string[];
+    relatedFiles: Array<{
+      path: string;
+      summary: string;
+    }>;
     checkpoints?: Array<{
       name: string;
       completed: boolean;
@@ -321,23 +325,11 @@ Please answer in English, keep it concise and clear.`;
             </div>
           )}
 
-          {/* {task.relatedFiles.length > 0 && (
-            <div className="pt-3">
-              <h4 className="mb-2 text-xs font-medium text-gray-600">
-                Related Files:
-              </h4>
-              <div className="space-y-1">
-                {task.relatedFiles.map((file, index) => (
-                  <div key={index} className="flex items-center text-xs">
-                    <span className="mr-2 text-gray-400">📄</span>
-                    <code className="rounded bg-blue-50 px-1 py-0.5 text-blue-600">
-                      {file}
-                    </code>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )} */}
+          {/* Related Files Panel */}
+          <RelatedFilesPanel
+            files={task.relatedFiles}
+            taskStatus={task.status}
+          />
 
           {task.checkpoints && task.checkpoints.length > 0 && (
             <div className="pt-3">

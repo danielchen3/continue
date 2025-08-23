@@ -10,7 +10,10 @@ interface TaskItem {
   status: "completed" | "in-progress" | "pending";
   progress?: number;
   completedTime?: string;
-  // relatedFiles: string[];
+  relatedFiles: Array<{
+    path: string;
+    summary: string;
+  }>;
   checkpoints?: Array<{
     name: string;
     completed: boolean;
@@ -48,6 +51,7 @@ export function useTaskFile() {
     let parsedTasks: TaskItem[] = [];
     let parsedProjectInfo: ProjectInfo | null = null;
     let parsedNextActions: string[] = [];
+    let inRelatedFilesSection = false;
 
     addLog(`📄 Total lines in file: ${lines.length}`);
     addLog("📄 First 10 lines:");
@@ -99,6 +103,9 @@ export function useTaskFile() {
           parsedTasks.push(currentTask as TaskItem);
         }
 
+        // Reset section tracking
+        inRelatedFilesSection = false;
+
         // Start new task
         const statusIcon = line.match(/[✅🔄📝❌]/)?.[0];
         const status = getStatusFromIcon(statusIcon);
@@ -116,7 +123,7 @@ export function useTaskFile() {
           id,
           title,
           status,
-          // relatedFiles: [],
+          relatedFiles: [],
           checkpoints: [],
           description: "", // default value
         };
@@ -129,13 +136,45 @@ export function useTaskFile() {
       }
 
       // Parse related files
-      // if (line.includes("- `") && currentSection !== "checkpoints") {
-      //   const file = line.match(/`([^`]+)`/)?.[1];
-      //   if (file && currentTask.relatedFiles) {
-      //     currentTask.relatedFiles.push(file);
-      //     addLog(`📄 Related file: "${file}"`);
-      //   }
-      // }
+      if (
+        line.includes("**Related Files**:") ||
+        line.includes("**相关文件**:")
+      ) {
+        // This is the start of related files section, we'll parse the following lines
+        inRelatedFilesSection = true;
+        addLog(`📄 Found Related Files section`);
+      }
+
+      // Reset section tracking when we hit other sections
+      if (
+        line.includes("**Checkpoints**:") ||
+        line.includes("**检查点**:") ||
+        line.includes("#### Work Log") ||
+        line.match(/^###\s/)
+      ) {
+        inRelatedFilesSection = false;
+      }
+
+      // Parse individual related file lines (format: "  - file/path description")
+      // Only when we're in the related files section and it's not a checkbox or markdown formatting
+      if (
+        inRelatedFilesSection &&
+        line.match(/^\s*-\s+\S+/) &&
+        !line.includes("[x]") &&
+        !line.includes("[ ]") &&
+        !line.includes("**") &&
+        currentTask.relatedFiles !== undefined
+      ) {
+        const fileMatch = line.match(/^\s*-\s+(\S+)\s*(.*)/);
+        if (fileMatch) {
+          const path = fileMatch[1];
+          const summary = fileMatch[2] || "";
+          if (currentTask.relatedFiles) {
+            currentTask.relatedFiles.push({ path, summary });
+            addLog(`📄 Related file: "${path}" - "${summary}"`);
+          }
+        }
+      }
 
       // Parse checkpoints
       if (line.match(/^\s*- \[[x\s]\]/)) {
@@ -144,6 +183,28 @@ export function useTaskFile() {
         if (currentTask.checkpoints) {
           currentTask.checkpoints.push({ name, completed });
           addLog(`✓ Checkpoint: "${name}", completed=${completed}`);
+        }
+      }
+
+      // Parse files from Work Log as backup if Related Files is empty
+      if (
+        line.includes("**Files Changed**:") &&
+        currentTask.relatedFiles &&
+        currentTask.relatedFiles.length === 0
+      ) {
+        const filesContent = line.split(":")[1]?.trim() || "";
+        if (filesContent) {
+          // Parse files from Work Log format, handle both comma-separated and individual files
+          const files = filesContent
+            .split(",")
+            .map((f) => f.trim())
+            .filter((f) => f.length > 0);
+          const fileObjects = files.map((file) => ({
+            path: file,
+            summary: "从Work Log提取",
+          }));
+          currentTask.relatedFiles.push(...fileObjects);
+          addLog(`📄 Work log files: ${JSON.stringify(files)}`);
         }
       }
     }
