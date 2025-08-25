@@ -113,11 +113,12 @@ join [#contribute on Discord](https://discord.gg/vapESyrFmJ).
 
 ### Explainability
 
-1. Full codebase structure analysis.
+1. Full codebase structure analysis
+   
    ![Feature Screenshot](features/structure.png)
-2. File Explanation
+3. File Explanation
    ![Feature Screenshot](features/fileexplain.png)
-3. Prompts: Rules for guiding full-stack beginners.
+4. Prompts: Rules for guiding full-stack beginners.
 
 ## License
 
