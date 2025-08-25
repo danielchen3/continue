@@ -60,6 +60,30 @@ export function RequirementsTaskAlignment({
 
         {showInstructions && (
           <div className="text-vsc-descriptionForeground bg-vsc-input-background mt-3 rounded-md p-3 text-xs">
+            <div className="mb-2 font-medium">
+              🎯 Interactive Mind Map Features:
+            </div>
+            <div className="mb-1 ml-2">
+              • <strong>Left click node</strong> → Local AI chat
+            </div>
+            <div className="mb-1 ml-2">
+              • <strong>Right click node</strong> → AI Assistant
+            </div>
+            <div className="mb-1 ml-2">
+              • <strong>Get suggestions</strong> for improvements
+            </div>
+            <div className="mb-2 ml-2">
+              • <strong>Smart analysis</strong> of requirements & tasks
+            </div>
+
+            <div className="mb-2 font-medium">Interaction modes:</div>
+            <div className="mb-1 ml-2">
+              � <strong>快速讨论</strong>: 左键→本地对话面板
+            </div>
+            <div className="mb-2 ml-2">
+              📝 <strong>Project help</strong>: Right click → AI suggestions
+            </div>
+
             <div className="mb-2 font-medium">Supported files:</div>
             <div className="ml-2">• Plan/re-plan.md</div>
             <div className="ml-2">• plan/re-plan.md</div>
@@ -76,6 +100,10 @@ export function RequirementsTaskAlignment({
 - T1.5.1 Scaffold React UI  
 - T1.6.3 Implement API for deleting`}
             </pre>
+            <div className="mt-2 text-xs text-green-600">
+              💡 <strong>Try clicking a node and ask:</strong> "What does this
+              mean?" or "How can I improve this?"
+            </div>
           </div>
         )}
       </div>

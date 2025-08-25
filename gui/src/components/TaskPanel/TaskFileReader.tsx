@@ -201,7 +201,7 @@ export function useTaskFile() {
             .filter((f) => f.length > 0);
           const fileObjects = files.map((file) => ({
             path: file,
-            summary: "从Work Log提取",
+            summary: "Frome Work Log",
           }));
           currentTask.relatedFiles.push(...fileObjects);
           addLog(`📄 Work log files: ${JSON.stringify(files)}`);

@@ -1,6 +1,14 @@
+import { ChatMessage } from "core";
+import { renderChatMessage } from "core/util/messageContent";
 import dagre from "dagre";
-import React, { useCallback, useContext, useEffect, useMemo } from "react";
-import type { Connection, Edge, Node } from "reactflow";
+import React, {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import type { Connection, Edge, Node, NodeMouseHandler } from "reactflow";
 import {
   addEdge,
   Background,
@@ -15,6 +23,8 @@ import {
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { IdeMessengerContext } from "../../context/IdeMessenger";
+import { useAppDispatch } from "../../redux/hooks";
+import { streamResponseThunk } from "../../redux/thunks/streamResponse";
 
 interface ParsedItem {
   id: string;
@@ -28,17 +38,304 @@ interface EnhancedMindMapVisualizationProps {
   className?: string;
 }
 
+interface SelectedNode {
+  id: string;
+  title: string;
+  description: string;
+  type: "requirement" | "task";
+}
+
+interface ChatSession {
+  messages: ChatMessage[];
+  isLoading: boolean;
+}
+
+interface ContextMenuState {
+  visible: boolean;
+  x: number;
+  y: number;
+  selectedNode: SelectedNode | null;
+}
+
 const EnhancedMindMapVisualization: React.FC<
   EnhancedMindMapVisualizationProps
 > = ({ className = "" }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [selectedNode, setSelectedNode] = useState<SelectedNode | null>(null);
+  const [chatSession, setChatSession] = useState<ChatSession>({
+    messages: [],
+    isLoading: false,
+  });
+  const [userInput, setUserInput] = useState("");
+  const [showChatPanel, setShowChatPanel] = useState(false);
+  const [contextMenu, setContextMenu] = useState<ContextMenuState>({
+    visible: false,
+    x: 0,
+    y: 0,
+    selectedNode: null,
+  });
+  const [quickPrompt, setQuickPrompt] = useState("");
 
   const ideMessenger = useContext(IdeMessengerContext);
+  const dispatch = useAppDispatch();
 
   const onConnect = useCallback(
     (params: Edge | Connection) => setEdges((eds) => addEdge(params, eds)),
     [setEdges],
+  );
+
+  // Handle node click to select it for chat
+  const onNodeClick: NodeMouseHandler = useCallback((event, node) => {
+    const nodeData = node.data.label.split("\n");
+    const nodeId = nodeData[0];
+    const nodeDescription = nodeData.slice(1).join("\n");
+    const nodeType = nodeId.startsWith("R") ? "requirement" : "task";
+
+    setSelectedNode({
+      id: nodeId,
+      title: nodeId,
+      description: nodeDescription,
+      type: nodeType,
+    });
+    setShowChatPanel(true);
+
+    // Reset chat session when selecting a new node
+    setChatSession({
+      messages: [],
+      isLoading: false,
+    });
+  }, []);
+
+  // Handle right-click for context menu
+  const onNodeContextMenu: NodeMouseHandler = useCallback((event, node) => {
+    event.preventDefault();
+
+    const nodeData = node.data.label.split("\n");
+    const nodeId = nodeData[0];
+    const nodeDescription = nodeData.slice(1).join("\n");
+    const nodeType = nodeId.startsWith("R") ? "requirement" : ("task" as const);
+
+    const selectedNodeInfo: SelectedNode = {
+      id: nodeId,
+      title: nodeId,
+      description: nodeDescription,
+      type: nodeType,
+    };
+
+    setContextMenu({
+      visible: true,
+      x: event.clientX,
+      y: event.clientY,
+      selectedNode: selectedNodeInfo,
+    });
+  }, []);
+
+  // Send prompt to main chat
+  const sendToMainChat = useCallback(
+    async (prompt: string, nodeInfo: SelectedNode) => {
+      if (!prompt.trim()) return;
+
+      // Create enhanced prompt with context
+      const enhancedPrompt = `I'm working on a mind map for project planning. I need help with this ${nodeInfo.type}:
+
+**${nodeInfo.type.toUpperCase()}: ${nodeInfo.title}**
+Description: ${nodeInfo.description}
+
+User feedback: ${prompt}
+
+Please help me improve this ${nodeInfo.type} and update the planning document accordingly. If you need to modify the plan file, please make the necessary changes to maintain the project structure.`;
+
+      // Create editor state for TipTap
+      const editorState = {
+        type: "doc",
+        content: [
+          {
+            type: "paragraph",
+            content: [{ type: "text", text: enhancedPrompt }],
+          },
+        ],
+      };
+
+      // Send to main chat using Redux
+      try {
+        await dispatch(
+          streamResponseThunk({
+            editorState,
+            modifiers: { useCodebase: false, noContext: false },
+          }),
+        );
+
+        // Close context menu and clear prompt
+        setContextMenu({ visible: false, x: 0, y: 0, selectedNode: null });
+        setQuickPrompt("");
+
+        // Refresh the mind map after a delay to show updated content
+        setTimeout(() => {
+          loadDocument();
+        }, 2000);
+      } catch (error) {
+        console.error("Error sending to main chat:", error);
+      }
+    },
+    [dispatch],
+  );
+
+  // Close context menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setContextMenu({ visible: false, x: 0, y: 0, selectedNode: null });
+    };
+
+    if (contextMenu.visible) {
+      document.addEventListener("click", handleClickOutside);
+      return () => document.removeEventListener("click", handleClickOutside);
+    }
+  }, [contextMenu.visible]);
+
+  // Send chat message to AI
+  const sendChatMessage = useCallback(
+    async (message: string) => {
+      if (!selectedNode || !message.trim()) return;
+
+      const userMessage: ChatMessage = {
+        role: "user",
+        content: message,
+      };
+
+      // Add user message to chat
+      setChatSession((prev) => ({
+        ...prev,
+        messages: [...prev.messages, userMessage],
+        isLoading: true,
+      }));
+
+      setUserInput("");
+
+      try {
+        // Create context for the AI about the selected node
+        const contextPrompt = `I'm looking at a mind map visualization of requirements and tasks. I have selected the following ${selectedNode.type}:
+
+**${selectedNode.type.toUpperCase()}: ${selectedNode.title}**
+Description: ${selectedNode.description}
+
+The user wants to discuss this ${selectedNode.type}. You are an expert in full-stack development, user typically want to know some fundamental knowledge.
+
+User's question: ${message}
+
+Please provide a helpful response about this ${selectedNode.type}.`;
+
+        // Stream response from AI using the same pattern as ProjectStructureGrid
+        let description = "";
+
+        const gen = ideMessenger.llmStreamChat(
+          {
+            completionOptions: {
+              maxTokens: 500,
+              temperature: 0.7,
+            },
+            title: `Chat about ${selectedNode.type}: ${selectedNode.title}`,
+            messages: [
+              {
+                role: "user",
+                content: contextPrompt,
+              },
+            ],
+          },
+          new AbortController().signal,
+        );
+
+        let next = await gen.next();
+        while (!next.done) {
+          // next.value is ChatMessage[] array
+          if (Array.isArray(next.value)) {
+            for (const aiMessage of next.value) {
+              if (aiMessage.role === "assistant" && aiMessage.content) {
+                if (typeof aiMessage.content === "string") {
+                  description += aiMessage.content;
+                } else if (Array.isArray(aiMessage.content)) {
+                  // If content is MessagePart[] array
+                  for (const part of aiMessage.content) {
+                    if (part.type === "text") {
+                      description += part.text;
+                    }
+                  }
+                }
+              }
+            }
+          }
+
+          // Update the assistant message in real-time
+          if (description) {
+            setChatSession((prev) => {
+              const messages = [...prev.messages];
+              const lastMessage = messages[messages.length - 1];
+              if (lastMessage && lastMessage.role === "assistant") {
+                lastMessage.content = description;
+              } else {
+                messages.push({
+                  role: "assistant",
+                  content: description,
+                });
+              }
+              return {
+                ...prev,
+                messages,
+              };
+            });
+          }
+
+          next = await gen.next();
+        }
+
+        // Clean up response
+        description = description.trim().replace(/^["']|["']$/g, "");
+
+        // Final update with cleaned description
+        setChatSession((prev) => {
+          const messages = [...prev.messages];
+          const lastMessage = messages[messages.length - 1];
+          if (lastMessage && lastMessage.role === "assistant") {
+            lastMessage.content = description;
+          } else if (description) {
+            messages.push({
+              role: "assistant",
+              content: description,
+            });
+          }
+          return {
+            ...prev,
+            messages,
+            isLoading: false,
+          };
+        });
+      } catch (error) {
+        console.error("Error sending chat message:", error);
+        setChatSession((prev) => ({
+          ...prev,
+          messages: [
+            ...prev.messages,
+            {
+              role: "assistant",
+              content: "Sorry, I encountered an error. Please try again.",
+            },
+          ],
+          isLoading: false,
+        }));
+      }
+    },
+    [selectedNode, ideMessenger],
+  );
+
+  // Handle Enter key in chat input
+  const handleKeyPress = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendChatMessage(userInput);
+      }
+    },
+    [userInput, sendChatMessage],
   );
 
   // Parse document content - exactly like mindmap.tsx
@@ -180,6 +477,7 @@ const EnhancedMindMapVisualization: React.FC<
             alignItems: "center",
             justifyContent: "center",
             transition: "all 0.2s ease",
+            cursor: "pointer",
           },
           sourcePosition: Position.Right,
           targetPosition: Position.Left,
@@ -292,6 +590,8 @@ const EnhancedMindMapVisualization: React.FC<
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onNodeClick={onNodeClick}
+        onNodeContextMenu={onNodeContextMenu}
         fitView
         attributionPosition="bottom-left"
         style={{ background: "#f8fafc" }}
@@ -318,7 +618,7 @@ const EnhancedMindMapVisualization: React.FC<
         />
         <Background gap={16} color="#e2e8f0" style={{ opacity: 0.5 }} />
 
-        {/* Stats Panel using ReactFlow Panel */}
+        {/* Stats Panel */}
         <Panel
           position="top-right"
           style={{
@@ -346,7 +646,7 @@ const EnhancedMindMapVisualization: React.FC<
                 color: "rgba(30, 41, 59, 0.8)",
               }}
             >
-              📊 Mind Map
+              📊 Interactive Mind Map
             </span>
             <button
               onClick={loadDocument}
@@ -374,6 +674,19 @@ const EnhancedMindMapVisualization: React.FC<
               🔄
             </button>
           </div>
+
+          {!showChatPanel && (
+            <div
+              style={{
+                fontSize: "9px",
+                color: "rgba(30, 41, 59, 0.6)",
+                marginBottom: "6px",
+                fontStyle: "italic",
+              }}
+            >
+              💡 Click any node to chat with AI
+            </div>
+          )}
 
           <div style={{ display: "flex", gap: "6px" }}>
             <div
@@ -412,7 +725,266 @@ const EnhancedMindMapVisualization: React.FC<
             </div>
           </div>
         </Panel>
+
+        {/* Interactive Chat Panel */}
+        {showChatPanel && selectedNode && (
+          <Panel
+            position="bottom-right"
+            style={{
+              background: "rgba(255, 255, 255, 0.95)",
+              borderRadius: "8px",
+              padding: "16px",
+              width: "400px",
+              height: "300px",
+              boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
+              backdropFilter: "blur(12px)",
+              border: "1px solid rgba(255, 255, 255, 0.2)",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            {/* Chat Header */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "12px",
+                paddingBottom: "8px",
+                borderBottom: "1px solid rgba(0,0,0,0.1)",
+              }}
+            >
+              <div>
+                <div
+                  style={{
+                    fontSize: "14px",
+                    fontWeight: "600",
+                    color: "#1e293b",
+                  }}
+                >
+                  💬 {selectedNode.type === "requirement" ? "📋" : "🎯"}{" "}
+                  {selectedNode.title}
+                </div>
+                <div
+                  style={{
+                    fontSize: "11px",
+                    color: "#64748b",
+                    marginTop: "2px",
+                  }}
+                >
+                  {selectedNode.description}
+                </div>
+              </div>
+              <button
+                onClick={() => setShowChatPanel(false)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  fontSize: "16px",
+                  cursor: "pointer",
+                  color: "#64748b",
+                  padding: "4px",
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Chat Messages */}
+            <div
+              style={{
+                flex: 1,
+                overflowY: "auto",
+                marginBottom: "12px",
+                fontSize: "12px",
+                scrollBehavior: "smooth",
+              }}
+            >
+              {chatSession.messages.length === 0 && !chatSession.isLoading && (
+                <div
+                  style={{
+                    color: "#64748b",
+                    fontStyle: "italic",
+                    textAlign: "center",
+                    marginTop: "20px",
+                  }}
+                >
+                  Ask a question about this {selectedNode.type}...
+                  <br />
+                  <small>
+                    💡 Try: "What does this mean?" or "How can I improve this?"
+                  </small>
+                </div>
+              )}
+              {chatSession.messages.map((message, index) => (
+                <div
+                  key={index}
+                  style={{
+                    marginBottom: "8px",
+                    padding: "8px",
+                    borderRadius: "6px",
+                    background:
+                      message.role === "user"
+                        ? "rgba(102, 126, 234, 0.1)"
+                        : "rgba(245, 87, 108, 0.1)",
+                    border:
+                      message.role === "user"
+                        ? "1px solid rgba(102, 126, 234, 0.2)"
+                        : "1px solid rgba(245, 87, 108, 0.2)",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "10px",
+                      fontWeight: "600",
+                      color: message.role === "user" ? "#667eea" : "#f5576c",
+                      marginBottom: "4px",
+                    }}
+                  >
+                    {message.role === "user" ? "👤 You" : "🤖 Assistant"}
+                  </div>
+                  <div style={{ whiteSpace: "pre-wrap" }}>
+                    {typeof message.content === "string"
+                      ? message.content
+                      : typeof message.content === "object" &&
+                          Array.isArray(message.content)
+                        ? message.content
+                            .map((part) =>
+                              part.type === "text" ? part.text : "",
+                            )
+                            .join("")
+                        : renderChatMessage(message)}
+                  </div>
+                </div>
+              ))}
+              {chatSession.isLoading && (
+                <div
+                  style={{
+                    color: "#64748b",
+                    fontStyle: "italic",
+                    textAlign: "center",
+                    padding: "12px",
+                    background: "rgba(245, 87, 108, 0.05)",
+                    borderRadius: "6px",
+                    border: "1px solid rgba(245, 87, 108, 0.1)",
+                  }}
+                >
+                  <div style={{ marginBottom: "4px" }}>🤖 Assistant</div>
+                  <div>🤔 Thinking...</div>
+                </div>
+              )}
+            </div>
+
+            {/* Chat Input */}
+            <div style={{ display: "flex", gap: "8px" }}>
+              <textarea
+                value={userInput}
+                onChange={(e) => setUserInput(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder={`Ask about ${selectedNode.title}...`}
+                disabled={chatSession.isLoading}
+                style={{
+                  flex: 1,
+                  padding: "8px",
+                  border: "1px solid rgba(0,0,0,0.2)",
+                  borderRadius: "4px",
+                  fontSize: "12px",
+                  resize: "none",
+                  height: "60px",
+                  fontFamily: "inherit",
+                }}
+              />
+              <button
+                onClick={() => sendChatMessage(userInput)}
+                disabled={chatSession.isLoading || !userInput.trim()}
+                style={{
+                  padding: "8px 12px",
+                  background:
+                    chatSession.isLoading || !userInput.trim()
+                      ? "#94a3b8"
+                      : "#667eea",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "4px",
+                  cursor:
+                    chatSession.isLoading || !userInput.trim()
+                      ? "not-allowed"
+                      : "pointer",
+                  fontSize: "12px",
+                  fontWeight: "500",
+                  height: "60px",
+                  minWidth: "60px",
+                }}
+              >
+                {chatSession.isLoading ? "..." : "📤"}
+              </button>
+            </div>
+          </Panel>
+        )}
       </ReactFlow>
+
+      {/* Context Menu */}
+      {contextMenu.visible && (
+        <div
+          className="fixed z-50 w-80 rounded-lg border border-gray-200 bg-white p-4 shadow-lg"
+          style={{
+            left: Math.min(contextMenu.x, window.innerWidth - 340),
+            top: Math.min(contextMenu.y, window.innerHeight - 220),
+            transform: "translate(-50%, -20px)",
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="mb-3">
+            <h3 className="mb-1 text-sm font-semibold text-gray-800">
+              AI Assistant
+            </h3>
+            <p className="text-xs text-gray-600">
+              {contextMenu.selectedNode?.type.toUpperCase()}:{" "}
+              {contextMenu.selectedNode?.title}
+            </p>
+            <p className="mt-1 line-clamp-2 text-xs text-gray-500">
+              {contextMenu.selectedNode?.description}
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <textarea
+              className="mx-auto block w-64 resize-none rounded-md border border-gray-300 p-2 text-sm focus:border-transparent focus:ring-2 focus:ring-blue-500"
+              rows={3}
+              placeholder="How would you like to improve this item?"
+              value={quickPrompt}
+              onChange={(e) => setQuickPrompt(e.target.value)}
+              autoFocus
+            />
+
+            <div className="flex justify-end space-x-2">
+              <button
+                onClick={() =>
+                  setContextMenu({
+                    visible: false,
+                    x: 0,
+                    y: 0,
+                    selectedNode: null,
+                  })
+                }
+                className="px-3 py-1 text-xs text-gray-600 transition-colors hover:text-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() =>
+                  contextMenu.selectedNode &&
+                  sendToMainChat(quickPrompt, contextMenu.selectedNode)
+                }
+                disabled={!quickPrompt.trim()}
+                className="rounded-md bg-blue-500 px-3 py-1 text-xs text-white transition-colors hover:bg-blue-600 disabled:cursor-not-allowed disabled:bg-gray-300"
+              >
+                Send
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
