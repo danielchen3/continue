@@ -90,7 +90,7 @@ join [#contribute on Discord](https://discord.gg/vapESyrFmJ).
    - Select a piece of text and press `Ctrl+Shift+Q` to initiate a quick conversation.
 2. In the mind map:
    - Left-click on a node to start a quick chat.
-   - Right-click on a node to ask a question, such as requesting the agent to break down a task.
+   - Right-click on a node to ask the agent to update the task or requirements, such as requesting the agent to break down a task.
     <div style="display: flex; justify-content: center; gap: 10px;">
        <img src="features/mindmap-1.png" alt="Feature Screenshot 1" style="width: 45%;">
        <img src="features/mindmap-2.png" alt="Feature Screenshot 2" style="width: 45%;">
