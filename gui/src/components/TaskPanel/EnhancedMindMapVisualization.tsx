@@ -45,6 +45,7 @@ const EnhancedMindMapVisualization: React.FC<
   const parseDocument = useCallback((content: string): ParsedItem[] => {
     const lines = content.split("\n");
     const items: ParsedItem[] = [];
+    let currentRequirement: string | null = null;
 
     for (const line of lines) {
       const trimmed = line.trim();
@@ -60,6 +61,7 @@ const EnhancedMindMapVisualization: React.FC<
           level,
           type: "requirement",
         });
+        currentRequirement = id; // Update current requirement context
         continue;
       }
 
@@ -76,6 +78,7 @@ const EnhancedMindMapVisualization: React.FC<
           parent: parentId,
           type: "requirement",
         });
+        currentRequirement = id; // Update current requirement context
         continue;
       }
 
@@ -84,17 +87,17 @@ const EnhancedMindMapVisualization: React.FC<
       if (taskMatch) {
         const [, id, text] = taskMatch;
         const level = (id.match(/\./g) || []).length;
-        // Find corresponding requirement parent (T1.1.1 -> R1.1)
-        const parentId = id
-          .replace(/^T/, "R")
-          .substring(0, id.lastIndexOf("."));
-        items.push({
-          id,
-          text: text.trim(),
-          level,
-          parent: parentId,
-          type: "task",
-        });
+        // Use the current requirement context as parent instead of deriving from task ID
+        // Only add task if we have a current requirement context
+        if (currentRequirement) {
+          items.push({
+            id,
+            text: text.trim(),
+            level,
+            parent: currentRequirement,
+            type: "task",
+          });
+        }
         continue;
       }
     }
@@ -249,13 +252,17 @@ const EnhancedMindMapVisualization: React.FC<
           const exampleContent = `
 ## R1. Frontend Features
 
-### R1.1 Add new tasks to a to-do list
+### R1.1 Users can add tasks to a todo list
+- T1.5.1 Scaffold React UI & state management
+- T1.6.2 Implement API for adding tasks
 
-- T1.1.1 Create input field and "Add" button
-- T1.1.2 Wire click/Enter to append task to list
-- T1.1.3 Validate non-empty title
-- T1.1.4 Re-render list after adding
+### R1.2 Users can delete tasks from the list
+- T1.5.1 Scaffold React UI & state management
+- T1.6.3 Implement API for deleting tasks
 
+### R1.3 Users can mark tasks as finished/unfinished
+- T1.5.1 Scaffold React UI & state management
+- T1.6.4 Implement API for marking tasks finished/unfinished
           `;
           const parsedItems = parseDocument(exampleContent);
           createNodesAndEdges(parsedItems);

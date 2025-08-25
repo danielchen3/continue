@@ -66,12 +66,15 @@ export function RequirementsTaskAlignment({
             <div className="ml-2">• re-plan-simple.md</div>
             <div className="mt-2 font-medium">File format example:</div>
             <pre className="mt-1 text-xs">
-              {`## R1. Main Requirement Title
+              {`## R1. Frontend
 
-### R1.1 Sub Requirement Title
+### R1.1 Users can add tasks
+- T1.5.1 Scaffold React UI
+- T1.6.2 Implement API for adding
 
-- T1.1.1 Task description
-- T1.1.2 Another task`}
+### R1.2 Users can delete tasks
+- T1.5.1 Scaffold React UI  
+- T1.6.3 Implement API for deleting`}
             </pre>
           </div>
         )}
